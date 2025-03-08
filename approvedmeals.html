@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Approved Meal History</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="container">
+    <h1>Approved Meal History</h1>
+    <nav>
+      <a href="GPT.html">Back to Home</a>
+      <a href="savedfoods.html">View Saved Foods</a>
+    </nav>
+    <div class="section">
+      <ul id="mealHistoryList"></ul>
+    </div>
+  </div>
+
+  <script>
+    const mealHistory = JSON.parse(localStorage.getItem("mealHistory")) || [];
+    const mealHistoryList = document.getElementById('mealHistoryList');
+    
+    if (mealHistory.length > 0) {
+      mealHistory.forEach(record => {
+        const li = document.createElement('li');
+        li.innerHTML = `<strong>Date:</strong> ${record.date}<br>
+                        <strong>Meal:</strong> ${record.meal.map(item => `${item.name} (${item.group}, Qty: ${item.quantity}) - ₦${(item.costPerUnit * item.quantity).toFixed(2)}`).join(', ')}<br>
+                        <strong>Total:</strong> ₦${record.total.toFixed(2)}`;
+        mealHistoryList.appendChild(li);
+      });
+    } else {
+      mealHistoryList.innerHTML = '<li>No approved meals yet. Approve a meal from the home page!</li>';
+    }
+  </script>
+</body>
+</html>

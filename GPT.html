@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Meal Suggestion App</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    /* Inline styles for balance display if not using external styles.css */
+    #balanceDisplay {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: #eee;
+      padding: 8px 12px;
+      border-radius: 4px;
+      font-weight: bold;
+    }
+    #balanceDisplay button {
+      margin-left: 8px;
+      padding: 2px 6px;
+      font-size: 12px;
+    }
+  </style>
+</head>
+<body>
+  <!-- Balance Display at Upper Right -->
+  <div id="balanceDisplay">
+    <span id="balanceText"></span>
+    <button id="toggleBalanceBtn" onclick="toggleBalance()">Hide</button>
+  </div>
+
+  <div class="container">
+    <h1>Meal Suggestion App</h1>
+    <nav>
+      <a href="savedfoods.html">View Saved Foods</a>
+      <a href="approvedMeals.html">Meal History</a>
+      <a href="balance.html">Set Balance</a>
+    </nav>
+
+    <!-- Food Entry Section -->
+    <div id="inputSection" class="section">
+      <h2>Add Cafeteria Foods</h2>
+      <input type="text" id="foodName" placeholder="Food Name">
+      <input type="number" id="foodPrice" placeholder="Price (per unit)" step="0.01">
+      <input type="number" id="foodQuantity" placeholder="Default Quantity" step="1" min="1">
+      <!-- Group Selector -->
+      <select id="foodGroup">
+        <option value="Food">Food</option>
+        <option value="Proteins">Proteins</option>
+        <option value="Drinks">Drinks</option>
+      </select>
+      <button onclick="addFood()">Add Food</button>
+      <p id="foodMessage"></p>
+    </div>
+
+    <!-- Daily Budget Section -->
+    <div id="budgetSection" class="section">
+      <h2>Daily Budget</h2>
+      <label>Daily Budget: ₦</label>
+      <input type="number" id="dailyBudget" placeholder="Daily Budget" step="0.01">
+      <button onclick="suggestMeal()">Suggest Meal</button>
+    </div>
+
+    <!-- Meal Suggestion Section -->
+    <div id="suggestSection" class="section">
+      <h2>Meal Suggestion</h2>
+      <ul id="suggestionList"></ul>
+    </div>
+
+    <!-- Adjustment & Approval Section -->
+    <div id="adjustSection" class="section">
+      <h2>Adjust & Approve Meal</h2>
+      <p>If the suggestion needs tweaking, remove items. Once satisfied, click "Approve Meal" to save it to history.</p>
+      <ul id="adjustMealList"></ul>
+      <button onclick="approveMeal()">Approve Meal</button>
+    </div>
+  </div>
+
+  <script>
+    // Retrieve saved foods from localStorage (or use an empty array)
+    let foods = JSON.parse(localStorage.getItem("foods")) || [];
+    // Retrieve monthly balance from localStorage (or default to 0)
+    let currentBalance = parseFloat(localStorage.getItem("monthlyBalance")) || 0;
+
+    // Update the balance display in the top right corner.
+    function updateBalanceDisplay() {
+  const balanceText = document.getElementById('balanceText');
+  const toggleBtn = document.getElementById('toggleBalanceBtn');
+  // Retrieve the stored visibility state; default to "visible" if not set.
+  const balanceVisibility = localStorage.getItem("balanceVisibility") || "visible";
+
+  if (balanceVisibility === "hidden") {
+    balanceText.style.display = "none";
+    toggleBtn.textContent = "Show";
+  } else {
+    balanceText.style.display = "inline";
+    toggleBtn.textContent = "Hide";
+  }
+  balanceText.textContent = "Balance: ₦" + currentBalance.toFixed(2);
+}
+
+    // Toggle hide/show balance text.
+    function toggleBalance() {
+  let balanceVisibility = localStorage.getItem("balanceVisibility") || "visible";
+  // Switch the state.
+  balanceVisibility = balanceVisibility === "visible" ? "hidden" : "visible";
+  localStorage.setItem("balanceVisibility", balanceVisibility);
+  updateBalanceDisplay();
+}
+
+    // Utility function to shuffle an array.
+    function shuffleArray(array) {
+      for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+      }
+    }
+
+    // Add a food item (with quantity and group) and store it in localStorage.
+    function addFood() {
+  // Convert food name to uppercase
+  const name = document.getElementById('foodName').value.trim().toUpperCase();
+  const price = parseFloat(document.getElementById('foodPrice').value);
+  const quantity = parseInt(document.getElementById('foodQuantity').value);
+  const group = document.getElementById('foodGroup').value;
+  
+  if (name && !isNaN(price) && !isNaN(quantity) && quantity > 0) {
+    // Cross-reference: check if a food with this name already exists.
+    // Since we store the name in uppercase, comparing directly works.
+    const exists = foods.some(food => food.name === name);
+    if (exists) {
+      alert("Food already exists! Please edit the existing item if you need to update it.");
+      return; // Exit without adding a duplicate.
+    }
+
+    const newFood = {
+      id: Date.now(),  // unique id based on timestamp
+      name: name,      // stored in uppercase
+      price: price,
+      quantity: quantity,
+      group: group,
+      removalCount: 0
+    };
+
+    foods.push(newFood);
+    localStorage.setItem("foods", JSON.stringify(foods));
+
+    // Clear input fields and show a confirmation message.
+    document.getElementById('foodName').value = '';
+    document.getElementById('foodPrice').value = '';
+    document.getElementById('foodQuantity').value = '';
+    document.getElementById('foodMessage').textContent = 'Food added successfully!';
+  } else {
+    alert('Please enter a valid food name, price, and quantity.');
+  }
+}
+
+
+    // Generate combinations from different food groups.
+    function generateCombinations(groupKeys, groups, index = 0, current = [], result = []) {
+      if (index === groupKeys.length) {
+        if (current.length > 0) {
+          result.push([...current]);
+        }
+        return result;
+      }
+      // Option to skip this group.
+      generateCombinations(groupKeys, groups, index + 1, current, result);
+      // Option to pick each item from the current group.
+      const key = groupKeys[index];
+      groups[key].forEach(item => {
+        current.push(item);
+        generateCombinations(groupKeys, groups, index + 1, current, result);
+        current.pop();
+      });
+      return result;
+    }
+
+    // Find the best combination of foods from different groups within the daily budget.
+    function findBestCombinationByGroup(availableFoods, budget) {
+      const groups = {};
+      availableFoods.forEach(food => {
+        if (!groups[food.group]) groups[food.group] = [];
+        groups[food.group].push(food);
+      });
+      const groupKeys = Object.keys(groups);
+      if (groupKeys.length === 0) return null;
+      const allCombos = generateCombinations(groupKeys, groups);
+      let best = { total: 0, combination: [] };
+      allCombos.forEach(combo => {
+        const sum = combo.reduce((acc, item) => acc + (item.price * item.quantity), 0);
+        if (sum <= budget && sum > best.total) {
+          best = { total: sum, combination: combo.slice() };
+        }
+      });
+      return best.total > 0 ? best : null;
+    }
+
+    // Suggest a meal using the daily budget.
+    function suggestMeal() {
+      const dailyBudget = parseFloat(document.getElementById('dailyBudget').value);
+      if (isNaN(dailyBudget) || dailyBudget <= 0) {
+        alert('Please set a valid daily budget.');
+        return;
+      }
+      let availableFoods = foods.filter(food => (food.removalCount || 0) < 3);
+      shuffleArray(availableFoods);
+      const result = findBestCombinationByGroup(availableFoods, dailyBudget);
+      const suggestionList = document.getElementById('suggestionList');
+      suggestionList.innerHTML = '';
+      if (result && result.combination.length > 0) {
+        result.combination.forEach(food => {
+          const li = document.createElement('li');
+          li.textContent = `${food.name} (${food.group}, Qty: ${food.quantity}) - ₦${(food.price * food.quantity).toFixed(2)}`;
+          suggestionList.appendChild(li);
+        });
+        const totalLi = document.createElement('li');
+        totalLi.textContent = `Total: ₦${result.total.toFixed(2)}`;
+        suggestionList.appendChild(totalLi);
+        
+        // Deduct the total from the monthly balance.
+        currentBalance -= result.total;
+        if (currentBalance < 0) currentBalance = 0;
+        localStorage.setItem("monthlyBalance", currentBalance);
+        updateBalanceDisplay();
+        populateAdjustSection(result.combination, dailyBudget);
+      } else {
+        suggestionList.innerHTML = '<li>No combination found within the daily budget.</li>';
+      }
+    }
+
+    // Populate the adjustment section.
+    function populateAdjustSection(combo, dailyBudget) {
+      const adjustList = document.getElementById('adjustMealList');
+      adjustList.innerHTML = '';
+      combo.forEach(food => {
+        const li = document.createElement('li');
+        const span = document.createElement('span');
+        span.textContent = `${food.name} (${food.group}, Qty: ${food.quantity}) - ₦${(food.price * food.quantity).toFixed(2)}`;
+        const removeBtn = document.createElement('button');
+        removeBtn.textContent = 'Remove';
+        removeBtn.onclick = function() {
+          let foodIndex = foods.findIndex(f => f.id === food.id);
+          if (foodIndex !== -1) {
+            foods[foodIndex].removalCount = (foods[foodIndex].removalCount || 0) + 1;
+            localStorage.setItem("foods", JSON.stringify(foods));
+          }
+          li.remove();
+          recalcAdjustment(dailyBudget);
+        };
+        li.appendChild(span);
+        li.appendChild(removeBtn);
+        adjustList.appendChild(li);
+      });
+    }
+
+    // Recalculate the total cost after adjustments.
+    function recalcAdjustment(dailyBudget) {
+      const adjustList = document.getElementById('adjustMealList');
+      let items = adjustList.getElementsByTagName('li');
+      let total = 0;
+      for (let li of items) {
+        const text = li.firstChild.textContent;
+        const parts = text.split(' - ₦');
+        if (parts.length === 2) {
+          total += parseFloat(parts[1]);
+        }
+      }
+      if (total > dailyBudget) {
+        alert('Adjusted meal exceeds the daily budget!');
+      }
+    }
+
+    // Approve and save the meal suggestion to history.
+    function approveMeal() {
+      const adjustList = document.getElementById('adjustMealList');
+      let items = adjustList.getElementsByTagName('li');
+      let approvedMeal = [];
+      let total = 0;
+      for (let li of items) {
+        const text = li.firstChild.textContent;
+        const namePart = text.split(' (')[0];
+        const groupPart = text.split('(')[1].split(',')[0];
+        const qtyPart = text.split('Qty: ')[1].split(')')[0];
+        const costPart = text.split(' - ₦')[1];
+        const quantity = parseInt(qtyPart);
+        const cost = parseFloat(costPart);
+        approvedMeal.push({ name: namePart, group: groupPart, quantity: quantity, costPerUnit: cost / quantity });
+        total += cost;
+      }
+      if (approvedMeal.length === 0) {
+        alert('No meal items to approve.');
+        return;
+      }
+      const mealRecord = {
+        meal: approvedMeal,
+        total: total,
+        date: new Date().toLocaleString()
+      };
+      let mealHistory = JSON.parse(localStorage.getItem("mealHistory")) || [];
+      mealHistory.push(mealRecord);
+      localStorage.setItem("mealHistory", JSON.stringify(mealHistory));
+      alert('Meal approved and saved to history!');
+      document.getElementById('adjustMealList').innerHTML = '';
+      document.getElementById('suggestionList').innerHTML = '';
+    }
+  </script>
+</body>
+</html>

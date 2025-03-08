@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Saved Cafeteria Foods</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="container">
+    <h1>Saved Cafeteria Foods</h1>
+    <nav>
+      <a href="GPT.html">Back to Home</a>
+      <a href="approvedMeals.html">Meal History</a>
+    </nav>
+    <div class="section">
+      <ul id="savedFoodList"></ul>
+    </div>
+  </div>
+
+  <script>
+    // Render the saved foods list.
+    function renderFoods() {
+      const foods = JSON.parse(localStorage.getItem("foods")) || [];
+      const savedFoodList = document.getElementById('savedFoodList');
+      savedFoodList.innerHTML = '';
+
+      if (foods.length > 0) {
+        foods.forEach(food => {
+          const li = document.createElement('li');
+          li.innerHTML = `${food.name} (${food.group}, Qty: ${food.quantity}) - ₦${(food.price * food.quantity).toFixed(2)} `;
+          
+          // Create Edit button.
+          const editBtn = document.createElement('button');
+          editBtn.textContent = 'Edit';
+          editBtn.onclick = function() {
+            editFood(food.id);
+          };
+          
+          // Create Delete button with confirmation.
+          const deleteBtn = document.createElement('button');
+          deleteBtn.textContent = 'Delete';
+          deleteBtn.onclick = function() {
+            if (confirm("Are you sure you want to delete this food item?")) {
+              deleteFood(food.id);
+            }
+          };
+
+          li.appendChild(editBtn);
+          li.appendChild(deleteBtn);
+          savedFoodList.appendChild(li);
+        });
+      } else {
+        savedFoodList.innerHTML = '<li>No saved foods yet. Please add some foods from the home page.</li>';
+      }
+    }
+
+    // Delete a food item by its unique id.
+    function deleteFood(foodId) {
+      let foods = JSON.parse(localStorage.getItem("foods")) || [];
+      foods = foods.filter(food => food.id !== foodId);
+      localStorage.setItem("foods", JSON.stringify(foods));
+      renderFoods();
+    }
+
+    // Edit a food item by its unique id.
+    function editFood(foodId) {
+      let foods = JSON.parse(localStorage.getItem("foods")) || [];
+      let foodIndex = foods.findIndex(food => food.id === foodId);
+      if (foodIndex === -1) return;
+      
+      // Use prompt dialogs to get new values.
+      let newName = prompt("Enter new food name:", foods[foodIndex].name);
+      if (newName === null) return; // If cancelled, do nothing.
+      
+      let newPrice = prompt("Enter new price per unit:", foods[foodIndex].price);
+      if (newPrice === null) return;
+      newPrice = parseFloat(newPrice);
+      
+      let newQuantity = prompt("Enter new quantity:", foods[foodIndex].quantity);
+      if (newQuantity === null) return;
+      newQuantity = parseInt(newQuantity);
+      
+      let newGroup = prompt("Enter new group (Food, Proteins, Drinks):", foods[foodIndex].group);
+      if (newGroup === null) return;
+      
+      // Update the food object.
+      foods[foodIndex].name = newName.trim();
+      foods[foodIndex].price = isNaN(newPrice) ? foods[foodIndex].price : newPrice;
+      foods[foodIndex].quantity = isNaN(newQuantity) ? foods[foodIndex].quantity : newQuantity;
+      foods[foodIndex].group = newGroup.trim();
+      
+      // Save changes back to localStorage.
+      localStorage.setItem("foods", JSON.stringify(foods));
+      renderFoods();
+    }
+
+    // Render foods when the page loads.
+    window.onload = renderFoods;
+  </script>
+</body>
+</html>
